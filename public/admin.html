@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin - Issue Door Token</title>
+  <style>
+    body { font-family: system-ui, Arial; margin: 0; padding: 24px; background:#f6f7f9; }
+    .card { max-width: 480px; margin: 0 auto; background: white; border-radius: 14px; padding: 20px; box-shadow: 0 6px 24px rgba(0,0,0,0.08); }
+    label { display: block; margin-top: 12px; font-size: 14px; }
+    input, button, select { width: 100%; padding: 10px 12px; margin-top: 4px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
+    button { border: 0; background: #2563eb; color: white; font-size: 15px; cursor: pointer; margin-top: 16px; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .row { display: flex; gap: 8px; }
+    .row > div { flex: 1; }
+    .result, .error { margin-top: 16px; font-size: 14px; word-break: break-all; }
+    .error { color: #b91c1c; }
+    .success { color: #166534; }
+    .small { font-size: 12px; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Issue Door Token</h2>
+    <p class="small">This page calls <code>/admin/issue</code> with your admin API key.</p>
+
+    <label for="adminKey">Admin API key</label>
+    <input id="adminKey" type="password" autocomplete="current-password" />
+
+    <label for="dateTo">Date to</label>
+    <input id="dateTo" type="datetime-local" />
+    <p class="small">Defaults to 24 hours from now if left unchanged.</p>
+
+    <button id="issueButton">Issue token</button>
+
+    <div id="status" class="result"></div>
+    <div id="output" class="result"></div>
+  </div>
+
+  <script>
+    const adminKeyInput = document.getElementById("adminKey");
+    const dateToInput = document.getElementById("dateTo");
+    const issueButton = document.getElementById("issueButton");
+    const statusElement = document.getElementById("status");
+    const outputElement = document.getElementById("output");
+
+    function setStatus(message, type) {
+      statusElement.textContent = message || "";
+      statusElement.className = "result" + (type ? " " + type : "");
+    }
+
+    function setOutputHtml(html) {
+      outputElement.innerHTML = html || "";
+    }
+
+    function pad(number) {
+      return number.toString().padStart(2, "0");
+    }
+
+    function toLocalDateTimeValue(date) {
+      const year = date.getFullYear();
+      const month = pad(date.getMonth() + 1);
+      const day = pad(date.getDate());
+      const hours = pad(date.getHours());
+      const minutes = pad(date.getMinutes());
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    (function initializeDefaultDateTo() {
+      const now = new Date();
+      const defaultDateTo = new Date(now.getTime() + 24 * 3600 * 1000);
+      dateToInput.value = toLocalDateTimeValue(defaultDateTo);
+    })();
+
+    issueButton.addEventListener("click", async () => {
+      setStatus("", "");
+      setOutputHtml("");
+
+      const adminKey = adminKeyInput.value.trim();
+      if (!adminKey) {
+        setStatus("Admin API key is required.", "error");
+        return;
+      }
+
+      const now = new Date();
+      let dateTo;
+      if (dateToInput.value) {
+        const parsed = new Date(dateToInput.value);
+        if (Number.isNaN(parsed.getTime())) {
+          setStatus("Date To is invalid.", "error");
+          return;
+        }
+        dateTo = parsed;
+      } else {
+        dateTo = new Date(now.getTime() + 24 * 3600 * 1000);
+      }
+
+      const ttlMilliseconds = dateTo.getTime() - now.getTime();
+      const ttlSeconds = Math.floor(ttlMilliseconds / 1000);
+
+      if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
+        setStatus("Computed TTL must be a positive number of seconds.", "error");
+        return;
+      }
+
+      issueButton.disabled = true;
+      setStatus("Issuing token...", "");
+
+      try {
+        const response = await fetch("/admin/issue", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-api-key": adminKey,
+          },
+          body: JSON.stringify({ timeToLiveInSeconds: ttlSeconds }),
+        });
+
+        const responseBody = await response.json().catch(() => ({}));
+
+        if (!response.ok || !responseBody.ok) {
+          const errorMessage = responseBody.error || "Request failed";
+          setStatus(`Error: HTTP ${response.status} - ${errorMessage}`, "error");
+          setOutputHtml(`<pre>${JSON.stringify(responseBody, null, 2)}</pre>`);
+          return;
+        }
+
+        const relativeUrl = responseBody.url;
+        const token = responseBody.token;
+        const absoluteUrl = String(window.location.origin) + String(relativeUrl || "");
+
+        const linkHtml = `<a href="${absoluteUrl}" target="_blank" rel="noopener noreferrer">${absoluteUrl}</a>`;
+
+        const copyButtonId = "copyButton";
+        const tokenHtml = token ? `<div><strong>Token:</strong> ${token}</div>` : "";
+        const copyButtonHtml = `<button id="${copyButtonId}" type="button">Copy URL</button>`;
+
+        setStatus("Token issued successfully.", "success");
+        setOutputHtml(`
+          <div><strong>URL:</strong> ${linkHtml}</div>
+          ${tokenHtml}
+          <div style="margin-top:8px;">${copyButtonHtml}</div>
+        `);
+
+        const copyButton = document.getElementById(copyButtonId);
+        if (copyButton) {
+          copyButton.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(absoluteUrl);
+              setStatus("URL copied to clipboard.", "success");
+            } catch (error) {
+              setStatus("Failed to copy URL to clipboard.", "error");
+            }
+          });
+        }
+      } catch (error) {
+        setStatus("Network or unexpected error.", "error");
+      } finally {
+        issueButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "tapo-ifttt-trigger",
+  "version": "1.0.0",
+  "description": "Minimal Node.js 20 service exposing POST /tapo/open to trigger IFTTT via Gmail emails.",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs",
+    "dev": "node --watch index.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "nodemailer": "^6.9.0"
+  }
+}
