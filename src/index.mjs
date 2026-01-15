@@ -14,7 +14,6 @@ const fileName = fileURLToPath(import.meta.url);
 const directoryName = path.dirname(fileName);
 
 const requiredEnvVariables = [
-  "PORT",
   "GMAIL_USER",
   "GMAIL_APP_PASSWORD",
   "IFTTT_EMAIL",
@@ -29,7 +28,7 @@ if (missingEnvVariables.length > 0) {
   process.exit(1);
 }
 
-const port = Number.parseInt(process.env.PORT, 10) || 3000;
+const port = Number(process.env.PORT) || 8080;
 const openSubject = process.env.OPEN_SUBJECT;
 const guidSecret = process.env.GUID_SECRET;
 
