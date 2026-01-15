@@ -37,7 +37,6 @@ application.use(express.json());
 application.use(express.static(path.join(directoryName, "../public")));
 
 const tokenService = createTokenService({ secret: guidSecret });
-const stopTokenCleanup = tokenService.startCleanup(60000);
 
 const adminRouter = createAdminRouter({ requireAdminAuth, tokenService });
 const tapoRouter = createTapoRouter({ tokenService, sendTaggedEmail, openSubject });
