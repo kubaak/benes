@@ -5,7 +5,7 @@ export function createTokenService({ secret }) {
     throw new Error("Token service requires a non-empty secret");
   }
 
-  const MAX_TTL_SECONDS = 3 * 24 * 60 * 60; // 3 day (tune as you like)
+  const MAX_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 day (tune as you like)
 
   function issueGuestToken(timeToLiveInSeconds) {
     const ttlSeconds = Number.parseInt(String(timeToLiveInSeconds), 10);

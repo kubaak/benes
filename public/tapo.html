@@ -14,35 +14,57 @@
 </head>
 <body>
   <div class="card">
-    <h2>Open the building door</h2>
-    <p>Tap the button below to buzz/open the entrance.</p>
-    <button id="btn">Open door</button>
+    <h2 id="title"></h2>
+    <p id="subtitle"></p>
+    <button id="btn"></button>
     <div class="msg" id="msg"></div>
   </div>
+  <script src="/i18n.js"></script>
 
   <script>
-    const button = document.getElementById("btn");
-    const message = document.getElementById("msg");
+    const translations = window.TRANSLATIONS || {};
 
-    function setMessage(text) {
-      message.textContent = text;
+    function detectLanguage() {
+      const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"])
+        .map(l => String(l).toLowerCase());
+
+      // Try exact match first (e.g. "pt-br"), then base ("pt")
+      for (const l of langs) {
+        if (translations[l]) return l;
+        const base = l.split("-")[0];
+        if (translations[base]) return base;
+      }
+      return "en";
     }
 
+    const lang = detectLanguage();
+    const t = translations[lang] || translations.en;
+
+    // Apply localized static text
+    document.title = t.pageTitle;
+    document.getElementById("title").textContent = t.title;
+    document.getElementById("subtitle").textContent = t.subtitle;
+
+    const button = document.getElementById("btn");
+    const message = document.getElementById("msg");
+    button.textContent = t.button;
+
+    function setMessage(text) { message.textContent = text; }
+
+    // --- token + action -----------------------------------------------------
     const rawHash = window.location.hash || "";
     const token = decodeURIComponent(rawHash.slice(1) || "");
 
     if (!token) {
       button.disabled = true;
-      setMessage("Missing or invalid token. Please use the link that was sent to you.");
+      setMessage(t.missingToken);
     }
 
     button.addEventListener("click", async () => {
-      if (!token) {
-        return;
-      }
+      if (!token) return;
 
       button.disabled = true;
-      setMessage("Sending request...");
+      setMessage(t.sending);
 
       try {
         const response = await fetch("/tapo/open/" + encodeURIComponent(token), {
@@ -53,16 +75,14 @@
         const data = await response.json().catch(() => ({}));
 
         if (response.ok) {
-          setMessage("✅ Done. The door should open shortly.");
+          setMessage(t.ok);
         } else {
-          setMessage("❌ Failed: " + (data.error || "Forbidden or upstream error."));
+          setMessage(t.failed(data.error));
         }
       } catch (error) {
-        setMessage("❌ Network error. Please try again.");
+        setMessage(t.network);
       } finally {
-        setTimeout(() => {
-          button.disabled = false;
-        }, 4000);
+        setTimeout(() => { button.disabled = false; }, 4000);
       }
     });
   </script>

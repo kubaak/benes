@@ -19,6 +19,7 @@ const requiredEnvVariables = [
   "IFTTT_EMAIL",
   "OPEN_SUBJECT",
   "GUID_SECRET",
+  "ADMIN_API_KEY"
 ];
 
 const missingEnvVariables = requiredEnvVariables.filter((variableName) => !process.env[variableName]);
