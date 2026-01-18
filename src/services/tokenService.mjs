@@ -5,15 +5,10 @@ export function createTokenService({ secret }) {
     throw new Error("Token service requires a non-empty secret");
   }
 
-  const MAX_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 day (tune as you like)
-
   function issueGuestToken(timeToLiveInSeconds) {
     const ttlSeconds = Number.parseInt(String(timeToLiveInSeconds), 10);
     if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
       throw new Error("timeToLiveInSeconds must be a positive integer.");
-    }
-    if (ttlSeconds > MAX_TTL_SECONDS) {
-      throw new Error(`timeToLiveInSeconds must be <= ${MAX_TTL_SECONDS}.`);
     }
 
     const id = crypto.randomUUID();
